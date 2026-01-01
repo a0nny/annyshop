@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>手機易用版賣場</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; gap: 20px; padding: 15px; background: #f0f2f5; }
+        @media (min-width: 768px) { body { flex-direction: row; } } /* 電腦版才左右排 */
+        
+        .column { flex: 1; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { color: #1a73e8; font-size: 1.2rem; border-left: 5px solid #1a73e8; padding-left: 10px; }
+        
+        input, button { width: 100%; box-sizing: border-box; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; }
+        button { background: #1a73e8; color: white; border: none; font-weight: bold; font-size: 16px; cursor: pointer; }
+        
+        .card { background: white; border: 1px solid #eee; padding: 15px; margin-top: 15px; border-radius: 12px; text-align: center; }
+        .card img { width: 100%; border-radius: 8px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="column">
+        <h2>🏪 賣家上架 (支援拍照)</h2>
+        <input type="text" id="pName" placeholder="商品名稱">
+        <input type="number" id="pPrice" placeholder="價格">
+        <label style="font-size: 14px; color: #666;">選擇商品照片：</label>
+        <input type="file" id="pImageFile" accept="image/*"> 
+        <button onclick="addProduct()">上架商品</button>
+        <div id="sellerProductList"></div>
+    </div>
+
+    <div class="column">
+        <h2>💰 訂單回報</h2>
+        <input type="number" id="payAmount" placeholder="匯款金額">
+        <input type="text" id="lastFive" maxlength="5" placeholder="後五碼">
+        <button style="background: #34a853;" onclick="submitOrder()">提交回報</button>
+        <div id="orderList"></div>
+    </div>
+
+    <script>
+        let products = JSON.parse(localStorage.getItem('my_products')) || [];
+        let orders = JSON.parse(localStorage.getItem('my_orders')) || [];
+        render();
+
+        function addProduct() {
+            const name = document.getElementById('pName').value;
+            const price = document.getElementById('pPrice').value;
+            const fileInput = document.getElementById('pImageFile');
+            const file = fileInput.files[0];
+
+            if(!name || !price) return alert("請填寫資訊");
+
+            if (file) {
+                // 將圖片轉換成 Base64 字串 (這樣才能存進 localStorage)
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imgBase64 = e.target.result;
+                    saveAndRender(name, price, imgBase64);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                saveAndRender(name, price, "https://via.placeholder.com/150");
+            }
+        }
+
+        function saveAndRender(name, price, imgData) {
+            products.push({ name, price, img: imgData });
+            try {
+                localStorage.setItem('my_products', JSON.stringify(products));
+            } catch (e) {
+                alert("圖片檔案太大，localStorage 存不下了！建議縮小照片再試。");
+            }
+            render();
+            // 重置表單
+            document.getElementById('pName').value = '';
+            document.getElementById('pPrice').value = '';
+            document.getElementById('pImageFile').value = '';
+        }
+
+        function submitOrder() {
+            const amount = document.getElementById('payAmount').value;
+            const five = document.getElementById('lastFive').value;
+            if(!amount || !five) return alert("請填寫回報資訊");
+            orders.push({ amount, five, status: "等待核對" });
+            localStorage.setItem('my_orders', JSON.stringify(orders));
+            render();
+        }
+
+        function render() {
+            document.getElementById('sellerProductList').innerHTML = products.map(p => `
+                <div class="card"><img src="${p.img}"><div><b>${p.name}</b></div><div style="color:red;">$${p.price}</div></div>
+            `).join('');
+
+            document.getElementById('orderList').innerHTML = orders.map(o => `
+                <div class="card" style="text-align:left;"><b>後五碼：${o.five}</b> ($${o.amount})<br>狀態：${o.status}</div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
